@@ -1,7 +1,14 @@
 import requests
-import datetime
+from datetime import datetime
 
-# method displays a page of a certain number of tickets
+# User cache to maintain a cache of the names the users to reduce API hits
+user_cache = {}
+
+# Credentials for API
+username = 'kduddi2@illinois.edu'
+token = 'Pxi91Dr5ywN8NJTFPtvnbhOzNcQJWpixCoyrbJYw'
+
+# Method displays a page of a certain number of tickets
 def display_page(tickets, start, count):
 	"""This method displays a page of count number of tickets from the start"""
 	end = len(tickets) if (start+count > len(tickets)) else start + count
@@ -9,18 +16,21 @@ def display_page(tickets, start, count):
 		t = tickets[i]
 		print(f"{t['id']} {t['subject']}")
 
-# method displays info of certain ticket
+# Method displays info of certain ticket
 def display_ticket(t):
 	"""This method displays information about a single ticket"""
 	print(f"Ticket ID: {t['id']}")
-	print(f"Requester ID: {t['requester_id']} \t Assignee ID: {t['assignee_id']}")
-	print(f"Status: {t['status']}")
-	created_at = (t['created_at'])
-	print(f"Due at: {t['due_at']} \t Created at: {created_at}")
+	requester = get_user(t['requester_id'])
+	assignee = get_user(t['assignee_id'])
+	print(f"Requester ID: {requester} \t Assignee ID: {assignee}")
+	print(f"Status: {t['status']} \t Priority: {t['priority']}")
+	created_at = format_time(t['created_at'])
+	due_at = format_time(t['due_at'])
+	print(f"Due at: {due_at} \t Created at: {created_at}")
 	print(f"Subject: {t['subject']} \nDescription: {t['description']}")
 	
 
-# method finds ticket with certain id number
+# Method finds ticket with certain id number
 def find_ticket(tickets, ticket_id):
 	"""This method returns a ticket based on a the id passed into the function"""
 	for t in tickets:
@@ -28,15 +38,47 @@ def find_ticket(tickets, ticket_id):
 			return t
 	return None
 
+# Method displays time from Zendesk ticket is readable format
+def format_time(str):
+	"""This method returns the time from a Zendesk ticket in a human readable format using local format"""
+	if (str == None):
+		return "--"
+	# Remove the last Z
+	str = str.rstrip('Z')
+	dt = datetime.fromisoformat(str)
+	return dt.strftime("%c")
+
+# Method returns name for a requester or assignee from ID
+def get_user(user_id):
+	"""This method returns the name of the user from an ID for a requester or assignee"""
+	if user_id in user_cache:
+		return user_cache[user_id]
+
+	# Set the request parameters
+	url = f"https://zcctesla.zendesk.com/api/v2/users/{user_id}.json"
+
+	# Do the HTTP get request
+	response = requests.get(url, auth=(username + "/token", token))
+
+	# Check for HTTP codes other than 200
+	if response.status_code != 200:
+		# API failed. Fall back to user id. Return user_id
+		return user_id
+
+	# Decode the JSON response into a dictionary and use the data
+	data = response.json()
+	user = data['user']
+	user_cache[user_id] = user['name']
+	return user['name']
+
+
 def load_tickets():
 	"""This method fetches all tickets from zcctesla.zendesk.com"""
 	# Set the request parameters
 	url = 'https://zcctesla.zendesk.com/api/v2/tickets.json'
-	user = 'kduddi2@illinois.edu'
-	token = 'Pxi91Dr5ywN8NJTFPtvnbhOzNcQJWpixCoyrbJYw'
 
 	# Do the HTTP get request
-	response = requests.get(url, auth=(user + "/token", token))
+	response = requests.get(url, auth=(username + "/token", token))
 
 	# Check for HTTP codes other than 200
 	if response.status_code != 200:

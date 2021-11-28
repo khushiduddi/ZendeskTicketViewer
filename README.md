@@ -47,11 +47,20 @@ $ python3 test_viewer.py
     find_ticket(tickets, ticket_id)
         This method returns a ticket based on a the id passed into the function
     
+    format_time(str)
+        This method returns the time from a Zendesk ticket in a human readable format using local format
+    
+    get_user(user_id)
+        This method returns the name of the user from an ID for a requester or assignee
+    
     load_tickets()
         This method fetches all tickets from zcctesla.zendesk.com
     
     main()
         Main method for interactive viewing ticket list and ticket information
+
+## DATA
+    user_cache = {}
 
 ## FILE
     github.com/khushiduddi/Zendesk/ZendeskTicketViewer/viewer.py
