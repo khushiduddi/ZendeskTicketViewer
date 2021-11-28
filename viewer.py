@@ -5,7 +5,7 @@ from datetime import datetime
 user_cache = {}
 
 # Credentials for API
-username = 'kduddi2@illinois.edu'
+username = 'kduddi2@illinois.edu!'
 token = 'Pxi91Dr5ywN8NJTFPtvnbhOzNcQJWpixCoyrbJYw'
 
 # Method displays a page of a certain number of tickets
@@ -19,6 +19,7 @@ def display_page(tickets, start, count):
 # Method displays info of certain ticket
 def display_ticket(t):
 	"""This method displays information about a single ticket"""
+	print("-----------------------------------------------------")
 	print(f"Ticket ID: {t['id']}")
 	requester = get_user(t['requester_id'])
 	assignee = get_user(t['assignee_id'])
@@ -28,6 +29,7 @@ def display_ticket(t):
 	due_at = format_time(t['due_at'])
 	print(f"Due at: {due_at} \t Created at: {created_at}")
 	print(f"Subject: {t['subject']} \nDescription: {t['description']}")
+	print("-----------------------------------------------------")
 	
 
 # Method finds ticket with certain id number
@@ -45,7 +47,11 @@ def format_time(str):
 		return "--"
 	# Remove the last Z
 	str = str.rstrip('Z')
-	dt = datetime.fromisoformat(str)
+	try:
+		dt = datetime.fromisoformat(str)
+	except:
+		# Failure happened: most likely incorrect format. Return string
+		return str
 	return dt.strftime("%c")
 
 # Method returns name for a requester or assignee from ID
@@ -82,7 +88,7 @@ def load_tickets():
 
 	# Check for HTTP codes other than 200
 	if response.status_code != 200:
-		print('Status:', response.status_code, 'Problem with the request. Exiting.')
+		print('Status:', response.status_code, 'Problem with the request. Exiting. Please try again later or check your credentials')
 		exit()
 
 	# Decode the JSON response into a dictionary and use the data

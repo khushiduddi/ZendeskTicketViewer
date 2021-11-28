@@ -2,6 +2,8 @@
 
 This is my ticket viewer for Zendesk's 2021 coding challenge. I created a CLI version where you can interactively look through all tickets and choose which ones you want to view the information for based on ticket ID. I used the Zendesk REST API as my backend.
 
+I truly enjoyed working on this project. Thank you for the opportunity!
+
 ## Scenario
 The scenario I envisioned is that people working at zcctesla can use this ticket viewer to check on tickets to help customers. This program will be used by the support agents at the company. This will help them organize customer requests and complaints about their cars.
 
