@@ -1,12 +1,56 @@
 import requests
+import sys
+import json
 from datetime import datetime
 
 # User cache to maintain a cache of the names the users to reduce API hits
 user_cache = {}
-
+# Tickets and pagination
+tickets = []
+next_page = ""
+has_more = True
 # Credentials for API
-username = 'kduddi2@illinois.edu!'
-token = 'Pxi91Dr5ywN8NJTFPtvnbhOzNcQJWpixCoyrbJYw'
+apibase = 'https://zcctesla1.zendesk.com/api/v2'
+username = 'kduddi2@illinois.edu'
+token = '1KxTB4hdlMqxwXfOECgu2OPg4nspxuDh0qzb0J02'
+
+# Processes command line arguments for importing tickets
+def process_arg():
+	"""This method processes command line arguments"""
+	if (len(sys.argv) == 1):
+		return
+	if (len(sys.argv) != 3):
+		print("Error processing arguments")
+		print("Usage: python3 viewer.py [--import tickets.json]")
+		exit()
+	if (sys.argv[1] == "--import"):
+		import_tickets(sys.argv[2])
+
+# Imports tickets from a file
+def import_tickets(filename):
+	"""This method allows agents to import tickets from a file"""
+	# Read the file
+	try:
+		f = open(filename)
+	except IOError:
+		print(f"Error: Cannot read file {filename}")
+		return
+	
+	ticket_data = json.load(f)
+	f.close()
+
+	# Set the request parameters
+	url = apibase + '/imports/tickets/create_many.json'
+
+	# Do the HTTP get request
+	response = requests.post(url, auth=(username + "/token", token), json=ticket_data)
+
+	# Check for HTTP codes other than 200
+	if response.status_code != 200:
+		print('Status:', response.status_code, 'Problem with the request. Exiting. Please try again later or check your credentials')
+		print("Response status code: ", response.status_code, " Response reason: ", response.reason, " Text: ", response.text)
+		exit()
+
 
 # Method displays a page of a certain number of tickets
 def display_page(tickets, start, count):
@@ -61,7 +105,7 @@ def get_user(user_id):
 		return user_cache[user_id]
 
 	# Set the request parameters
-	url = f"https://zcctesla.zendesk.com/api/v2/users/{user_id}.json"
+	url = f"{apibase}/users/{user_id}.json"
 
 	# Do the HTTP get request
 	response = requests.get(url, auth=(username + "/token", token))
@@ -80,27 +124,40 @@ def get_user(user_id):
 
 def load_tickets():
 	"""This method fetches all tickets from zcctesla.zendesk.com"""
+	global next_page, tickets, has_more
 	# Set the request parameters
-	url = 'https://zcctesla.zendesk.com/api/v2/tickets.json'
-
+	url = f"{apibase}/tickets.json?page[size]=100"
+	# Check if at the end of all tickets
+	if (next_page == "" and not has_more):
+		return tickets
+	if (next_page != ""):
+		url = next_page
+	print("Loading tickets...")
 	# Do the HTTP get request
 	response = requests.get(url, auth=(username + "/token", token))
 
 	# Check for HTTP codes other than 200
 	if response.status_code != 200:
 		print('Status:', response.status_code, 'Problem with the request. Exiting. Please try again later or check your credentials')
+		print("Response status code: ", response.status_code, " Response reason: ", response.reason, " Text: ", response.text)
 		exit()
 
 	# Decode the JSON response into a dictionary and use the data
 	data = response.json()
-	tickets = data['tickets']
+	tickets.extend(data['tickets'])
+	has_more = data['meta']['has_more']
+	if has_more:
+		next_page = data['links']['next']
+	else:
+		next_page = ""
 	return tickets
 
 
 def main():
 	"""Main method for interactive viewing ticket list and ticket information"""
+	process_arg()
 	tickets = load_tickets()
-	PAGE = 25
+	PAGE = 30
 	user_input = ""
 	start = 0
 	while user_input.lower() not in ("q", "x"):
@@ -119,8 +176,13 @@ def main():
 			else:
 				display_ticket(t)
 		else:
-			# next page
-			start = start if (start >= len(tickets)-PAGE) else (start + PAGE)
+			# Check if there is at least 1 full page left
+			if (start + PAGE + PAGE >= len(tickets)):
+				# Load more tickets from server
+				tickets = load_tickets()
+			if (start + PAGE < len(tickets)):
+				start += PAGE
+				
 
 
 # run main if run as a program
