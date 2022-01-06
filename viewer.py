@@ -9,10 +9,21 @@ user_cache = {}
 tickets = []
 next_page = ""
 has_more = True
+# Mode: Search or List
+mode = 'list'
 # Credentials for API
 apibase = 'https://zcctesla1.zendesk.com/api/v2'
 username = 'kduddi2@illinois.edu'
 token = '1KxTB4hdlMqxwXfOECgu2OPg4nspxuDh0qzb0J02'
+
+#Initialize global variables
+def init(m='list'):
+	"""This method initializes the global state"""
+	global tickets, next_page, has_more, mode
+	tickets = []
+	next_page = ""
+	has_more = True
+	mode = m
 
 # Processes command line arguments for importing tickets
 def process_arg():
@@ -122,11 +133,14 @@ def get_user(user_id):
 	return user['name']
 
 
-def load_tickets():
+def load_tickets(recent=False):
 	"""This method fetches all tickets from zcctesla.zendesk.com"""
 	global next_page, tickets, has_more
 	# Set the request parameters
-	url = f"{apibase}/tickets.json?page[size]=100"
+	if (recent):
+		url = f"{apibase}/tickets.json?page[size]=100&sort=-updated_at"
+	else:
+		url = f"{apibase}/tickets.json?page[size]=100"
 	# Check if at the end of all tickets
 	if (next_page == "" and not has_more):
 		return tickets
@@ -138,8 +152,7 @@ def load_tickets():
 
 	# Check for HTTP codes other than 200
 	if response.status_code != 200:
-		print('Status:', response.status_code, 'Problem with the request. Exiting. Please try again later or check your credentials')
-		print("Response status code: ", response.status_code, " Response reason: ", response.reason, " Text: ", response.text)
+		print('Status:', response.status_code,' Text: ', response.text, 'Problem with the request. Exiting. Please try again later or check your credentials')
 		exit()
 
 	# Decode the JSON response into a dictionary and use the data
@@ -152,9 +165,44 @@ def load_tickets():
 		next_page = ""
 	return tickets
 
+# Search through tickets using API
+def search_tickets(search_str="", recent=False):
+	global next_page, tickets, has_more
+	url = f"{apibase}/search.json?query={search_str}"
+	if (recent):
+		# XXX SORT ASC HAS BUG: ids slightly out of order
+		url += "&sort_by=updated_at&sort_order=desc"
+	# Check if at the end of filtered tickets
+	if (next_page == None and not has_more):
+		return tickets
+	if (next_page != ""):
+		url = next_page
+
+	response = requests.get(url, auth=(username + "/token", token))
+
+	# Check for HTTP codes other than 200
+	if response.status_code != 200:
+		print('Status:', response.status_code,' Text: ', response.text, 'Problem with the request. Exiting. Please try again later or check your credentials')
+		exit()
+	
+	data = response.json()
+	# Remove non tickets from result 'result_type' != 'ticket'
+	i = 0
+	while i < len(data['results']):
+		if data['results'][i]['result_type'] != 'ticket':
+			data['results'].pop(i)
+		else:
+			i += 1
+
+	tickets.extend(data['results'])
+	next_page = data['next_page']
+	has_more = (next_page != None) 
+	return tickets
+
 
 def main():
 	"""Main method for interactive viewing ticket list and ticket information"""
+	global mode
 	process_arg()
 	tickets = load_tickets()
 	PAGE = 30
@@ -165,7 +213,7 @@ def main():
 		if not user_input.isdigit():
 			display_page(tickets, start, PAGE)
 		# ask user for input
-		user_input = input("Press N-next, P-previous, ID-view ticket and Q-quit: ")
+		user_input = input("Press n-next, p-previous, id-view ticket, search <text>-search, list-get ticket list, recent-sort and q-quit: ")
 		user_input = user_input.lower()
 		if user_input == "p":
 			start = 0 if (start < PAGE) else (start - PAGE)
@@ -175,11 +223,32 @@ def main():
 				print("The ID you entered is not valid")
 			else:
 				display_ticket(t)
+		elif user_input.startswith("search "):
+			searched_str = user_input[7:]
+			init('search')
+			tickets = search_tickets(searched_str)
+			start = 0
+		elif user_input.startswith("list"):
+			init('list')
+			tickets = load_tickets()
+			start = 0
+		elif user_input.startswith("recent"):
+			if mode == "list":
+				init('list')
+				tickets = load_tickets(True)
+				start = 0
+			else:
+				init('search')
+				tickets = search_tickets(searched_str, True)
+				start = 0
 		else:
 			# Check if there is at least 1 full page left
 			if (start + PAGE + PAGE >= len(tickets)):
-				# Load more tickets from server
-				tickets = load_tickets()
+				if mode == 'list':
+					# Load more tickets from server
+					tickets = load_tickets()
+				else:
+					tickets = search_tickets()
 			if (start + PAGE < len(tickets)):
 				start += PAGE
 				
