@@ -1,6 +1,7 @@
 import requests
 import sys
 import json
+from decouple import config
 from datetime import datetime
 
 # User cache to maintain a cache of the names the users to reduce API hits
@@ -13,8 +14,8 @@ has_more = True
 mode = 'list'
 # Credentials for API
 apibase = 'https://zcctesla1.zendesk.com/api/v2'
-username = 'kduddi2@illinois.edu'
-token = '1KxTB4hdlMqxwXfOECgu2OPg4nspxuDh0qzb0J02'
+username = config('USERNAME')
+token = config('TOKEN')
 
 #Initialize global variables
 def init(m='list'):
@@ -171,7 +172,7 @@ def search_tickets(search_str="", recent=False):
 	url = f"{apibase}/search.json?query={search_str}"
 	if (recent):
 		# XXX SORT ASC HAS BUG: ids slightly out of order
-		url += "&sort_by=updated_at&sort_order=desc"
+		url += "&sort_by=updated_at&sort_order=asc"
 	# Check if at the end of filtered tickets
 	if (next_page == None and not has_more):
 		return tickets
