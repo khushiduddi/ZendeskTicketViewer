@@ -26,7 +26,7 @@ class TestZendeskViewer(unittest.TestCase) :
 	
 	# Test get_user
 	def test_GetUserValid(self):
-		self.assertEqual(viewer.get_user(1903603417967), "Khushi Duddi")
+		self.assertEqual(viewer.get_user(1267642956750), "Khushi Duddi")
 	def test_GetUserInvalid(self):
 		self.assertEqual(viewer.get_user(999), 999)
 	def test_GetUserZero(self):

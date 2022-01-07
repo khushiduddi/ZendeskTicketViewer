@@ -29,6 +29,11 @@ While in the viewer, different keys invoke different actions:
 - ID Number of ticket to view ticket information
 - Q to quit
 
+In order to import tickets into your Zendesk customer support center, add --import and the filename to the run command:
+```
+$ python3 viewer.py --import <filename>
+```
+
 ## Unit Tests
 In order to run tests, fetch the test_viewer.py code from github.
 Run the tests on terminal.
@@ -55,13 +60,22 @@ $ python3 test_viewer.py
     get_user(user_id)
         This method returns the name of the user from an ID for a requester or assignee
     
+    import_tickets(filename)
+        This method allows agents to import tickets from a file
+    
     load_tickets()
         This method fetches all tickets from zcctesla.zendesk.com
     
     main()
         Main method for interactive viewing ticket list and ticket information
+    
+    process_arg()
+        This method processes command line arguments
 
 ## DATA
+    has_more = True
+    next_page = ''
+    tickets = []
     user_cache = {}
 
 ## FILE
